@@ -1,9 +1,7 @@
 ﻿namespace ConfirmationExample.ViewModels
 {
-    using System;
     using System.Reactive;
     using System.Reactive.Linq;
-    using System.Threading.Tasks;
     using ReactiveUI;
 
     public class FileListViewModel : ReactiveObject, IRoutableViewModel
@@ -21,64 +19,51 @@
                 "c:/temp/handegg.dat"
             });
 
-            DeleteFile = ReactiveCommand.CreateAsyncTask(
-                this.WhenAnyValue(vm => vm.SelectedFile).Select(s => s != null),
-                _ =>
+            ConfirmDelete = new Interaction<ConfirmEventViewModel, string>();
+
+            DeleteFile = ReactiveCommand.CreateFromTask(
+                async () =>
                 {
                     var fileToDelete = SelectedFile;
-                    var warningMessage = $"Do you really want to delete {fileToDelete}?";
+                    var baseMessage = $"Do you really want to delete {fileToDelete}?";
                     var help = "\nConfirm by entering the full file name below.";
+                    var message = baseMessage + help;
+                    var abort = this
+                        .WhenAnyValue(x => x.SelectedFile)
+                        .Skip(1)
+                        .Select(_ => Unit.Default);
 
-                    ConfirmDeleteViewModel = new ConfirmEventViewModel<string>
+                    while (true)
                     {
-                        ResultValue = string.Empty,
-                        WarningMessage = warningMessage + help,
-                        Cancel = ReactiveCommand.CreateAsyncTask(
-                            __ =>
-                            {
-                                ConfirmDeleteViewModel = null;
-                                return Task.CompletedTask;
-                            }),
-                        Confirm = ReactiveCommand.CreateAsyncTask(
-                            __ =>
-                            {
-                                if (ConfirmDeleteViewModel?.ResultValue == fileToDelete)
-                                {
-                                    SelectedFile = null;
+                        var info = new ConfirmEventViewModel(abort)
+                        {
+                            File = fileToDelete,
+                            Message = message
+                        };
+                        var confirmation = await ConfirmDelete.Handle(info);
 
-                                    Files.Remove(fileToDelete);
-                                    ConfirmDeleteViewModel = null;
-                                }
-                                else if (ConfirmDeleteViewModel != null)
-                                {
-                                    ConfirmDeleteViewModel.WarningMessage = warningMessage + "\nYou didn't type the right thing." + help;
-                                }
-
-                                if (ConfirmDeleteViewModel != null)
-                                {
-                                    ConfirmDeleteViewModel.ResultValue = string.Empty;
-                                }
-
-                                return Task.CompletedTask;
-                            })
-                    };
-
-                    return Task.CompletedTask;
-                });
-
-            // don't let the user delete the current file if they click away
-            this.WhenAnyValue(vm => vm.SelectedFile)
-                .Subscribe(_ => ConfirmDeleteViewModel = null);
+                        if (confirmation == null)
+                        {
+                            break;
+                        }
+                        else if (confirmation == fileToDelete)
+                        {
+                            SelectedFile = null;
+                            Files.Remove(fileToDelete);
+                            break;
+                        }
+                        else
+                        {
+                            message = baseMessage + "\nYou didn't type the right thing." + help;
+                        }
+                    }
+                },
+                this.WhenAnyValue(vm => vm.SelectedFile).Select(s => s != null));
         }
 
-        public ReactiveCommand<Unit> DeleteFile { get; }
+        public Interaction<ConfirmEventViewModel, string> ConfirmDelete { get; }
 
-        ConfirmEventViewModel<string> _confirmDeleteViewModel;
-        public ConfirmEventViewModel<string> ConfirmDeleteViewModel
-        {
-            get { return _confirmDeleteViewModel; }
-            set { this.RaiseAndSetIfChanged(ref _confirmDeleteViewModel, value); }
-        }
+        public ReactiveCommand<Unit, Unit> DeleteFile { get; }
 
         string _selectedFile;
         public string SelectedFile

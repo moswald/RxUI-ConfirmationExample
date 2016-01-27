@@ -12,10 +12,10 @@
             InitializeComponent();
 
             Locator.CurrentMutable.Register(() => new FileListView(), typeof(IViewFor<FileListViewModel>));
-            Locator.CurrentMutable.Register(() => new ConfirmEventView(), typeof(IViewFor<ConfirmEventViewModel<string>>));
+            Locator.CurrentMutable.Register(() => new ConfirmEventView(), typeof(IViewFor<ConfirmEventViewModel>));
 
             Router = ViewHost.Router = new RoutingState();
-            Router.Navigate.Execute(new FileListViewModel(this));
+            Router.Navigate.ExecuteAsync(new FileListViewModel(this));
         }
 
         public RoutingState Router { get; }
