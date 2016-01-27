@@ -16,24 +16,7 @@
             this.OneWayBind(ViewModel, vm => vm.Files, v => v.FileList.ItemsSource);
             this.Bind(ViewModel, vm => vm.SelectedFile, v => v.FileList.SelectedItem);
             this.BindCommand(ViewModel, vm => vm.DeleteFile, v => v.DeleteFileButton);
-
-            this.WhenAnyValue(x => x.ViewModel.ConfirmDelete)
-                .Subscribe(
-                    interaction => interaction.RegisterHandler(
-                        context =>
-                        {
-                            this.DeleteConfirm.ViewModel = context.Input;
-                            return context
-                                .Input
-                                .Handled
-                                .Do(
-                                    result =>
-                                    {
-                                        context.SetOutput(result);
-                                        this.DeleteConfirm.ViewModel = null;
-                                    })
-                                .Select(_ => Unit.Default);
-                        }));
+            this.OneWayBind(ViewModel, vm => vm.ConfirmDeleteViewModel, v => v.DeleteConfirm.ViewModel);
         }
 
         public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(

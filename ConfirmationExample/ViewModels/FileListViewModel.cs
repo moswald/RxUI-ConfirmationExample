@@ -19,7 +19,7 @@
                 "c:/temp/handegg.dat"
             });
 
-            ConfirmDelete = new Interaction<ConfirmEventViewModel, string>();
+            var confirmDelete = new Interaction<Unit, string>();
 
             DeleteFile = ReactiveCommand.CreateFromTask(
                 async () =>
@@ -33,35 +33,41 @@
                         .Skip(1)
                         .Select(_ => Unit.Default);
 
+                    ConfirmDeleteViewModel = new ConfirmEventViewModel(abort, confirmDelete)
+                    {
+                        Message = message
+                    };
+
                     while (true)
                     {
-                        var info = new ConfirmEventViewModel(abort)
-                        {
-                            File = fileToDelete,
-                            Message = message
-                        };
-                        var confirmation = await ConfirmDelete.Handle(info);
+                        var confirmation = await confirmDelete.Handle(Unit.Default);
 
-                        if (confirmation == null)
-                        {
-                            break;
-                        }
-                        else if (confirmation == fileToDelete)
+                        if (confirmation == fileToDelete)
                         {
                             SelectedFile = null;
                             Files.Remove(fileToDelete);
+                            ConfirmDeleteViewModel = null;
                             break;
                         }
-                        else
+
+                        if (confirmation == null)
                         {
-                            message = baseMessage + "\nYou didn't type the right thing." + help;
+                            ConfirmDeleteViewModel = null;
+                            break;
                         }
+
+                        ConfirmDeleteViewModel.Message = baseMessage + "\nYou didn't type the right thing." + help;
                     }
                 },
                 this.WhenAnyValue(vm => vm.SelectedFile).Select(s => s != null));
         }
 
-        public Interaction<ConfirmEventViewModel, string> ConfirmDelete { get; }
+        ConfirmEventViewModel _confirmDeleteViewModel;
+        public ConfirmEventViewModel ConfirmDeleteViewModel
+        {
+            get { return _confirmDeleteViewModel; }
+            set { this.RaiseAndSetIfChanged(ref _confirmDeleteViewModel, value); }
+        }
 
         public ReactiveCommand<Unit, Unit> DeleteFile { get; }
 

@@ -7,41 +7,40 @@
 
     public class ConfirmEventViewModel : ReactiveObject
     {
-        private IObservable<string> handled;
-
-        public ConfirmEventViewModel(IObservable<Unit> abort)
+        public ConfirmEventViewModel(IObservable<Unit> abort, Interaction<Unit, string> info)
         {
             this.Cancel = ReactiveCommand.Create(() => { });
             this.Confirm = ReactiveCommand.Create(() => { });
-            this.handled = this
-                .Confirm
-                .Select(_ => this.ResultValue)
-                .Merge(this.Cancel.Select(_ => (string)null))
-                .Merge(abort.Select(_ => (string)null));
+
+            info.RegisterHandler(
+                context => Confirm
+                    .Select(_ => ResultValue)
+                    .Merge(Cancel.Select(_ => (string)null))
+                    .Merge(abort.Select(_ => (string)null))
+                    .Do(
+                        result =>
+                        {
+                            context.SetOutput(result);
+                            ResultValue = string.Empty;
+                        })
+                    .Select(_ => Unit.Default));
         }
 
-        public IObservable<string> Handled => this.handled;
-
+        string _message;
         public string Message
         {
-            get;
-            set;
+            get { return _message; }
+            set { this.RaiseAndSetIfChanged(ref _message, value); }
         }
 
-        public string File
-        {
-            get;
-            set;
-        }
-
-        string _resultValue;
+        string _resultValue = string.Empty;
         public string ResultValue
         {
             get { return _resultValue; }
             set { this.RaiseAndSetIfChanged(ref _resultValue, value); }
         }
 
-        public ReactiveCommand<Unit, Unit> Cancel { get; set; }
-        public ReactiveCommand<Unit, Unit> Confirm { get; set; }
+        public ReactiveCommand<Unit, Unit> Cancel { get; }
+        public ReactiveCommand<Unit, Unit> Confirm { get; }
     }
 }
