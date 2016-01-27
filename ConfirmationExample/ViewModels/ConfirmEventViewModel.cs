@@ -23,6 +23,9 @@
                             context.SetOutput(result);
                             ResultValue = string.Empty;
                         })
+
+                    // @kentcb: take a look at this
+                    // not sure about this design - if you comment out this line, then the app crashes with "no handlers"
                     .Select(_ => Unit.Default));
         }
 
